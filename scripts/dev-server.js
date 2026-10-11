@@ -1,121 +1,102 @@
-process.env.NODE_ENV = 'development';
+process.env.NODE_ENV = 'development'
 
-const Vite = require('vite');
-const ChildProcess = require('child_process');
-const Path = require('path');
-const Chalk = require('chalk');
-const Chokidar = require('chokidar');
-const Electron = require('electron');
-const compileTs = require('./private/tsc');
-const FileSystem = require('fs');
-const { EOL } = require('os');
+import dotenv from 'dotenv'
+import { spawn } from 'node:child_process'
+import path from 'node:path'
+import pc from 'picocolors'
+import chokidar from 'chokidar'
+import electron from 'electron'
+import fs from 'node:fs'
+import { EOL } from 'node:os'
+import { startRenderer, compileMain, electronArgs } from './server-utils.js'
+import { ROOT } from './private/paths.js'
 
-let viteServer = null;
-let electronProcess = null;
-let electronProcessLocker = false;
-let rendererPort = 0;
-
-async function startRenderer() {
-    viteServer = await Vite.createServer({
-        configFile: Path.join(__dirname, '..', 'vite.config.js'),
-        mode: 'development',
-    });
-
-    return viteServer.listen();
-}
+// jcp --ignore-checks le fichier doit être ignoré par le pre-commit
+let electronProcess = null
+let electronProcessLocker = false
+let rendererPort = 0
 
 async function startElectron() {
-    if (electronProcess) { // single instance lock
-        return;
-    }
+  if (electronProcess) {
+    return // single instance lock
+  }
 
-    try {
-        await compileTs(Path.join(__dirname, '..', 'src', 'main'));
-    } catch {
-        console.log(Chalk.redBright('Could not start Electron because of the above typescript error(s).'));
-        electronProcessLocker = false;
-        return;
-    }
+  try {
+    await compileMain()
+  } catch {
+    console.log(pc.red('Could not start Electron because of the above TypeScript error(s).'))
+    electronProcessLocker = false
+    return
+  }
 
-    const args = [
-        Path.join(__dirname, '..', 'build', 'main', 'main.js'),
-        rendererPort,
-    ];
-    electronProcess = ChildProcess.spawn(Electron, args);
-    electronProcessLocker = false;
+  electronProcess = spawn(electron, electronArgs(rendererPort))
+  electronProcessLocker = false
 
-    electronProcess.stdout.on('data', data => {
-        if (data == EOL) {
-            return;
-        }
+  electronProcess.stdout.on('data', (data) => {
+    if (data.toString() === EOL) return
+    process.stdout.write(pc.blue('[electron] ') + pc.white(data.toString()))
+  })
 
-        process.stdout.write(Chalk.blueBright(`[electron] `) + Chalk.white(data.toString()))
-    });
+  electronProcess.stderr.on('data', (data) => process.stderr.write(pc.red('[electron] ') + pc.white(data.toString())))
 
-    electronProcess.stderr.on('data', data => 
-        process.stderr.write(Chalk.blueBright(`[electron] `) + Chalk.white(data.toString()))
-    );
-
-    electronProcess.on('exit', () => stop());
+  electronProcess.on('exit', () => stop())
 }
 
+/**
+ * Redémarrage d'Electron
+ */
 function restartElectron() {
-    if (electronProcess) {
-        electronProcess.removeAllListeners('exit');
-        electronProcess.kill();
-        electronProcess = null;
-    }
+  if (electronProcess) {
+    electronProcess.removeAllListeners('exit')
+    electronProcess.kill()
+    electronProcess = null
+  }
 
-    if (!electronProcessLocker) {
-        electronProcessLocker = true;
-        startElectron();
-    }
+  if (!electronProcessLocker) {
+    electronProcessLocker = true
+    startElectron()
+  }
 }
 
 function copyStaticFiles() {
-    copy('static');
+  copy('static')
 }
 
-/*
-The working dir of Electron is build/main instead of src/main because of TS.
-tsc does not copy static files, so copy them over manually for dev server.
-*/
-function copy(path) {
-    FileSystem.cpSync(
-        Path.join(__dirname, '..', 'src', 'main', path),
-        Path.join(__dirname, '..', 'build', 'main', path),
-        { recursive: true }
-    );
+/**
+ * The working dir of Electron is build/main instead of src/main because of TS.
+ * tsc does not copy static files, so copy them over manually for dev server.
+ */
+function copy(relativePath) {
+  fs.cpSync(path.join(ROOT, 'src', 'main', relativePath), path.join(ROOT, 'build', 'main', relativePath), {
+    recursive: true,
+  })
 }
 
 function stop() {
-    viteServer.close();
-    process.exit();
+  devServer.close()
+  process.exit()
 }
 
-async function start() {
-    console.log(`${Chalk.greenBright('=======================================')}`);
-    console.log(`${Chalk.greenBright('Starting Electron + Vite Dev Server...')}`);
-    console.log(`${Chalk.greenBright('=======================================')}`);
+console.log(pc.green('======================================='))
+console.log(pc.green('  Starting Electron + Vite Dev Server  '))
+console.log(pc.green('======================================='))
 
-    const devServer = await startRenderer();
-    rendererPort = devServer.config.server.port;
+// Variable d'environnement
+dotenv.config({ path: path.join(ROOT, '.env') })
 
-    copyStaticFiles();
-    startElectron();
+const devServer = await startRenderer()
+rendererPort = devServer.config.server.port
 
-    const path = Path.join(__dirname, '..', 'src', 'main');
-    Chokidar.watch(path, {
-        cwd: path,
-    }).on('change', (path) => {
-        console.log(Chalk.blueBright(`[electron] `) + `Change in ${path}. reloading... 🚀`);
+copyStaticFiles()
+await startElectron()
 
-        if (path.startsWith(Path.join('static', '/'))) {
-            copy(path);
-        }
+const mainPath = path.join(ROOT, 'src', 'main')
+chokidar.watch(mainPath, { cwd: mainPath }).on('change', (changedPath) => {
+  console.log(pc.blue('[electron] ') + `Change in ${changedPath}. reloading... 🚀`)
 
-        restartElectron();
-    });
-}
+  if (changedPath.startsWith(path.join('static', '/'))) {
+    copy(changedPath)
+  }
 
-start();
+  restartElectron()
+})
