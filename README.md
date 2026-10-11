@@ -19,7 +19,7 @@ Click the green **Use this template** button on top of the repository, and clone
 
 **Or..**
 
-Clone this repository: `git clone git@github.com:Deluze/electron-vue-template.git`
+Clone this repository: `git clone git@github.com:Daarunia/electron-vue-template.git`
 
 
 ### Install dependencies ⏬
