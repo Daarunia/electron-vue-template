@@ -4,7 +4,7 @@ import compile from './private/tsc.js'
 import { ROOT } from './private/paths.js'
 
 /**
- * Compilation du main
+ * Compile the main
  */
 export async function compileMain() {
   execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'build.js')], {
@@ -14,20 +14,20 @@ export async function compileMain() {
 }
 
 /**
- * Arguments d'exécution d'Electron
+ * Electron launch arguments
  */
 export function electronArgs(rendererPort, extraArgs = []) {
   return [path.join(ROOT, 'build', 'main', 'main.js'), String(rendererPort), ...extraArgs]
 }
 
 /**
- * Démarrage du front
+ * Start the renderer
  *
- * @param {import('vite').ServerOptions} [server] Options du serveur, par-dessus celles de vite.config.mjs
+ * @param {import('vite').ServerOptions} [server] Server options, on top of those from vite.config.mjs
  */
 export async function startRenderer(server = {}) {
-  // Import à la demande : les fixtures des tests importent ce module sans démarrer
-  // Vite, chaque worker chargerait sinon Vite et rolldown pour rien
+  // Lazy import, so modules importing this file without starting Vite
+  // do not load Vite and rolldown for nothing
   const { createServer } = await import('vite')
   let viteServer = await createServer({
     configFile: path.join(ROOT, 'vite.config.mjs'),

@@ -11,7 +11,6 @@ import { EOL } from 'node:os'
 import { startRenderer, compileMain, electronArgs } from './server-utils.js'
 import { ROOT } from './private/paths.js'
 
-// jcp --ignore-checks le fichier doit être ignoré par le pre-commit
 let electronProcess = null
 let electronProcessLocker = false
 let rendererPort = 0
@@ -43,7 +42,7 @@ async function startElectron() {
 }
 
 /**
- * Redémarrage d'Electron
+ * Restart Electron
  */
 function restartElectron() {
   if (electronProcess) {
@@ -81,7 +80,7 @@ console.log(pc.green('======================================='))
 console.log(pc.green('  Starting Electron + Vite Dev Server  '))
 console.log(pc.green('======================================='))
 
-// Variable d'environnement
+// Environment variables
 dotenv.config({ path: path.join(ROOT, '.env') })
 
 const devServer = await startRenderer()
