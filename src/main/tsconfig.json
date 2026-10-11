@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2015",
-    "module": "commonjs",
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../../build/main",
-    "allowJs": true,
     "noImplicitAny": false,
+    "types": ["node", "electron"]
   },
-  "exclude": ["static"]
+  "include": ["**/*.ts"],
+  "exclude": ["../../build/main", "preload/**/*.ts"]
 }
