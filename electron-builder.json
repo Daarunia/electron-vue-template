@@ -1,39 +1,40 @@
 {
-    "appId": "com.electron.app",
-    "directories": {
-        "output": "dist"
+  "appId": "com.electron.app",
+  "productName": "Electron App",
+  "directories": {
+    "output": "dist"
+  },
+  "nsis": {
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "shortcutName": "Electron App"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": ["snap"]
+  },
+  "files": [
+    "package.json",
+    {
+      "from": "build/main",
+      "to": "main"
     },
-
-    "nsis": {
-        "oneClick": false,
-        "perMachine": false,
-        "allowToChangeInstallationDirectory": true,
-        "shortcutName": "Electron App"
+    {
+      "from": "build/renderer",
+      "to": "renderer"
     },
-    "win": {
-        "target": "nsis"
-    },
-    "linux":  {
-        "target": ["snap"]
-    },
-    "files": [
-        {
-            "from": "build/main",
-            "to": "main",
-            "filter": ["**/*"]
-        },
-        {
-            "from": "build/renderer",
-            "to": "renderer",
-            "filter": ["**/*"]
-        },
-        {
-            "from": "src/main/static",
-            "to": "static",
-            "filter": ["**/*"]
-        },
-	"!build",
-	"!dist",
-	"!scripts"
-    ]
+    "!**/*.map",
+    "!**/node_modules/**/{docs/**,*.d.ts,*.d.mts,*.d.cts}",
+    "!**/node_modules/**/{README,readme,Readme,CHANGELOG,changelog,History,HISTORY,SECURITY,CONTRIBUTING,GOVERNANCE}.md"
+  ],
+  "extraResources": [
+    {
+      "from": "src/main/static",
+      "to": "static"
+    }
+  ]
 }
